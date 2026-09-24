@@ -6,81 +6,51 @@
 [![Express](https://img.shields.io/badge/Express-4.19-blue.svg)](https://expressjs.com/)
 [![React](https://img.shields.io/badge/React-18.3-cyan.svg)](https://reactjs.org/)
 
-**Provena** is a full-stack, enterprise-grade, tamper-evident data provenance and integrity verification system for Internet of Things (IoT) telemetry, backed by off-chain data storage and on-chain Ethereum smart contract proof anchoring (`IoTDataProvenance.sol`).
+**Provena** is a full-stack, enterprise-grade, tamper-evident data provenance and integrity verification system for Internet of Things (IoT) telemetry, backed by off-chain storage and on-chain Ethereum smart contract proof anchoring (`IoTDataProvenance.sol`).
 
 ---
 
-## 🎯 Core Agenda
+## 🎯 Central Purpose
 
-> **"Generate simulated IoT telemetry, compute a deterministic SHA-256 cryptographic fingerprint, store the actual dataset off-chain (PostgreSQL/SQLite), anchor its hash proof on an Ethereum blockchain (Sepolia / Hardhat), and allow anyone to independently verify whether the off-chain data has been modified after recording."**
+> **"Generate simulated IoT telemetry, compute a deterministic SHA-256 cryptographic fingerprint, store the actual dataset off-chain, anchor its proof on an Ethereum blockchain (Sepolia / Hardhat), and allow anyone using the application to independently verify whether the off-chain data has been modified after recording."**
 
 ---
 
-## 🏗️ Production Architecture ($0 Free Tier Stack)
+## 🏗️ Unified Single-Service Deployment Architecture ($0 Free Tier)
 
 ```text
-                    GitHub Repository
-                            |
-           +----------------+----------------+
-           |                                 |
-           v                                 v
-   Cloudflare Pages                     Render
-  Static React/Vite                   Free Web Service
- (Frontend Hosting)                 (Express Backend API)
-                                             |
-                      +----------------------+----------------------+
-                      |                                             |
-                      v                                             v
-               Neon PostgreSQL                            Ethereum Sepolia
-          (Off-Chain Data Storage)                   (On-Chain Provenance Anchors)
+                       GitHub Repository
+                               │
+                               ▼
+                     Render Free Web Service
+                    (ONE Unified Node/Express App)
+                               │
+        ┌──────────────────────┴──────────────────────┐
+        ▼                                             ▼
+  REST API & Engine                             React SPA UI
+ - /api/health                                 - Served from frontend/dist
+ - /api/sensor-data/record                     - Client-side SPA routing fallback
+ - /api/verify/:id                             - Relative fetch('/api/...')
+ - /api/tamper/:id                                    │
+ - Off-Chain Storage                                  │
+ - Sepolia Blockchain Service                         ▼
+        │                                       User Browser
+        └──────────────────────┬──────────────────────┘
+                               │
+                               ▼
+                   Single Public Application URL
+              (e.g., https://provena.onrender.com)
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, Lucide React Icons, hosted on **Cloudflare Pages**.
-- **Backend API**: Node.js, Express.js, SHA-256 Cryptographic Engine (`crypto`), hosted on **Render Web Service**.
-- **Off-Chain Storage**: **Neon PostgreSQL** (Production) / Persistent Local Database (Local Dev).
+- **Unified Server**: Node.js & Express serving both `/api/...` endpoints and static built React SPA (`frontend/dist`).
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide React Icons.
+- **Off-Chain Storage**: Persistent Off-Chain Database Engine.
 - **On-Chain Blockchain**: **Ethereum Sepolia Testnet** / Local Hardhat Node via `ethers.js v6`.
 - **Smart Contract**: Solidity (`0.8.24`) - `IoTDataProvenance.sol`.
-
----
-
-## 🔄 Cryptographic Provenance Workflow
-
-```text
-SIMULATED IoT SENSOR (ENV_SENSOR_001)
-         │
-         ▼
- SENSOR TELEMETRY GENERATED
-         │
-         ▼
-DETERMINISTIC CANONICAL JSON
-         │
-         ▼
-  SHA-256 HASH GENERATED
-         │
- ┌───────┴────────┐
- │                │
- ▼                ▼
-OFF-CHAIN      ON-CHAIN PROOF
-SQLite / Neon   Sepolia Smart Contract
-PostgreSQL      (IoTDataProvenance.sol)
- │                │
- └───────┬────────┘
-         │
-         ▼
-VERIFICATION ENGINE AUDIT
-         │
-         ▼
-HASH COMPARISON (Off-Chain Recalculated vs On-Chain Immutable)
-         │
- ┌───────┴────────┐
- │                │
- ▼                ▼
-✓ VERIFIED    ✕ TAMPER DETECTED
-```
 
 ---
 
@@ -98,31 +68,24 @@ cd blockchain
 node ./node_modules/hardhat/internal/cli/cli.js run scripts/deploy.js --network localhost
 ```
 
-### 2. Backend Server Setup
+### 2. Unified Build & Run (Single URL Port 5000)
 ```bash
-cd backend
-node server.js
+npm run build      # Builds frontend static assets to frontend/dist
+npm start          # Starts unified server on http://localhost:5000
 ```
-*Runs at `http://localhost:5000`.*
-
-### 3. Frontend Dashboard Setup
-```bash
-cd frontend
-node ./node_modules/vite/bin/vite.js
-```
-*Runs at `http://localhost:3000`.*
+Open `http://localhost:5000` in your web browser.
 
 ---
 
-## 🌐 Production Deployment Guide
+## 🌐 Render Production Deployment
 
-For full zero-cost production deployment instructions using GitHub, Neon PostgreSQL, Sepolia Testnet, Render, and Cloudflare Pages, see **[docs/deployment.md](file:///d:/Work%20Space/Projects/Iot_Data_Provenance%20&%20Verification/docs/deployment.md)**.
+For full zero-cost production deployment instructions using Render Free Web Service, see **[docs/deployment.md](file:///d:/Work%20Space/Projects/Iot_Data_Provenance%20&%20Verification/docs/deployment.md)**.
 
 ---
 
 ## 🧪 Demonstration & Verification Guide
 
-1. Open the application dashboard (`http://localhost:3000` locally or your Cloudflare Pages URL).
+1. Open `http://localhost:5000` (or your live Render public URL).
 2. Click **"Generate & Anchor Reading"** to generate an IoT reading and submit a blockchain transaction.
 3. Click **"Verify Audit"** to confirm that recalculated SHA-256 hash matches the on-chain proof (**`✓ VERIFIED INTACT`**).
 4. Click **"Tamper Demo Sandbox"** and click **"Corrupt Off-Chain Database Record"** (modifying off-chain temperature e.g. 24.7°C -> 38.6°C).
@@ -130,10 +93,10 @@ For full zero-cost production deployment instructions using GitHub, Neon Postgre
 
 ---
 
-## 🛡️ Security Boundary Note
+## 🛡️ Security & Limitation Notes
 
-> **Data Integrity vs Physical Sensor Calibration**:
-> Provena proves that *recorded telemetry has not been modified after the blockchain proof transaction was mined*. It does not guarantee physical sensor hardware calibration prior to reporting.
+- **Data Integrity / Tamper Evidence**: Proven. If off-chain data is altered after proof creation, the recalculated SHA-256 hash will diverge from the smart contract proof.
+- **Ephemeral Filesystem Disclosure**: On Render Free, off-chain database records reset when the service spins down or restarts, which is acceptable for hackathon demonstration purposes.
 
 ---
 

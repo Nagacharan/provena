@@ -1,120 +1,84 @@
-# Provena: Production Deployment Guide ($0 Free Tier)
+# Provena: Unified Single-Service Render Deployment Guide ($0 Free Tier)
 
-This guide provides step-by-step instructions for deploying **Provena** to a long-term **$0 recurring cost production environment**.
-
----
-
-## 🏗️ Target Production Stack & Provider Free Tiers
-
-| Layer | Provider / Platform | Free Tier Specifications & Limits |
-| :--- | :--- | :--- |
-| **Frontend** | **Cloudflare Pages** | Unlimited bandwidth, 500 builds/month, static React/Vite |
-| **Backend** | **Render Web Service** | 512 MB RAM, spins down after 15m inactivity (cold start ~20s) |
-| **Database** | **Neon PostgreSQL** | 0.5 GiB storage, auto-suspend after inactivity |
-| **Blockchain** | **Ethereum Sepolia Testnet** | Free testnet ETH via Sepolia Faucets |
-| **RPC** | **Alchemy / Infura / Public** | Free Sepolia RPC endpoints (e.g. `https://rpc.sepolia.org`) |
+This guide provides step-by-step instructions for deploying **Provena** as **ONE unified Render Web Service** from **ONE GitHub repository**.
 
 ---
 
-## 📋 Step-by-Step Deployment Procedure
+## 🏗️ Target Unified Single-Service Architecture
+
+```text
+                       GitHub Repository
+                               │
+                               ▼
+                     Render Free Web Service
+                    (ONE Unified Node/Express App)
+                               │
+        ┌──────────────────────┴──────────────────────┐
+        ▼                                             ▼
+  REST API & Engine                             React SPA UI
+ - /api/health                                 - Served from frontend/dist
+ - /api/sensor-data/record                     - Client-side SPA routing fallback
+ - /api/verify/:id                             - Relative fetch('/api/...')
+ - /api/tamper/:id                                    │
+ - Persistent Off-Chain Storage                       │
+ - Sepolia Blockchain Service                         ▼
+        │                                       User Browser
+        └──────────────────────┬──────────────────────┘
+                               │
+                               ▼
+                   Single Public Application URL
+              (e.g., https://provena.onrender.com)
+```
+
+---
+
+## 📋 Step-by-Step Deployment Instructions
 
 ### STEP 1: GitHub Repository Setup
-1. Create a public or private GitHub repository named `provena`.
-2. Push your project code:
+Push the repository to GitHub:
 ```bash
-git init
 git add .
-git commit -m "Initial commit for Provena production deployment"
-git remote add origin https://github.com/YOUR_USERNAME/provena.git
-git branch -M main
+git commit -m "Configure Provena unified single-service deployment for Render"
 git push -u origin main
 ```
-*Note: Ensure `.gitignore` prevents `.env`, `node_modules`, `dist/`, and private keys from being committed.*
 
 ---
 
-### STEP 2: Neon PostgreSQL Database Setup
-1. Sign up at [neon.tech](https://neon.tech) (Free Tier).
-2. Create a project named `provena-db`.
-3. Copy your PostgreSQL Connection String from the Neon dashboard:
-   `postgres://USER:PASSWORD@ep-xyz.region.aws.neon.tech/neondb?sslmode=require`
-4. Keep this connection string for your Render environment variables (`DATABASE_URL`).
-
----
-
-### STEP 3: Ethereum Sepolia Smart Contract Deployment
-1. Obtain Sepolia testnet ETH from a free faucet (e.g. `sepoliafaucet.com` or `alchemy.com/faucets/ethereum-sepolia`).
-2. Add your wallet private key and Sepolia RPC URL to `.env`:
-```env
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
-PRIVATE_KEY=0xYOUR_TESTNET_PRIVATE_KEY
-```
-3. Deploy `IoTDataProvenance.sol` to Sepolia testnet:
+### STEP 2: Deploy Smart Contract to Ethereum Sepolia Testnet
+1. Obtain Sepolia testnet ETH from a free Sepolia faucet (e.g., `sepoliafaucet.com`).
+2. Run the Hardhat deployment script targeting Sepolia:
 ```bash
 cd blockchain
 node ./node_modules/hardhat/internal/cli/cli.js run scripts/deploy.js --network sepolia
 ```
-4. Copy the deployed contract address output (e.g. `0x1234...5678`) for your Render backend configuration (`CONTRACT_ADDRESS`).
+3. Copy the deployed contract address output (e.g. `0x1234...5678`).
 
 ---
 
-### STEP 4: Render Backend Deployment
-1. Sign up at [render.com](https://render.com).
+### STEP 3: Create Render Web Service
+1. Log in to [render.com](https://render.com).
 2. Click **New +** -> **Web Service**.
-3. Connect your GitHub repository `provena`.
+3. Select your GitHub repository (`provena`).
 4. Configure service settings:
-   - **Name**: `provena-backend`
-   - **Root Directory**: `backend`
+   - **Name**: `provena`
    - **Environment**: `Node`
-   - **Build Command**: `npm install`
+   - **Build Command**: `npm run build`
    - **Start Command**: `npm start`
    - **Instance Type**: `Free`
-5. Add Environment Variables in the Render dashboard:
+
+5. Configure Environment Variables on Render:
+   - `PORT` = `10000`
    - `NODE_ENV` = `production`
-   - `DATABASE_URL` = `<your_neon_postgresql_url>`
-   - `SEPOLIA_RPC_URL` = `<your_sepolia_rpc_url>`
-   - `PRIVATE_KEY` = `<your_wallet_private_key>`
+   - `SEPOLIA_RPC_URL` = `<your_sepolia_rpc_endpoint>`
+   - `PRIVATE_KEY` = `<your_testnet_private_key>`
    - `CONTRACT_ADDRESS` = `<your_sepolia_contract_address>`
-   - `FRONTEND_URL` = `https://provena.pages.dev` (or your Cloudflare Pages URL)
-6. Click **Deploy Web Service**. Render will output your live API URL (e.g. `https://provena-backend.onrender.com`).
+
+6. Click **Deploy Web Service**.
+Render will build the React frontend (`frontend/dist`), install Node dependencies, and start the Express server serving both the REST API and the React SPA UI at **ONE public URL** (e.g., `https://provena.onrender.com`).
 
 ---
 
-### STEP 5: Cloudflare Pages Frontend Deployment
-1. Sign up at [pages.cloudflare.com](https://pages.cloudflare.com).
-2. Click **Create a project** -> **Connect to Git**.
-3. Select your repository `provena`.
-4. Configure build settings:
-   - **Framework preset**: `Vite`
-   - **Root directory**: `frontend`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-5. Add Environment Variable:
-   - `VITE_API_URL` = `https://provena-backend.onrender.com`
-6. Click **Save and Deploy**. Cloudflare Pages will build and host your frontend statically at `https://provena.pages.dev`.
+## ⚠️ Important Free Tier Limitations & Disclosures
 
----
-
-## 🔍 Verification & Health Checks
-
-Once deployed:
-1. Open `https://provena-backend.onrender.com/api/health` in your browser to confirm backend health:
-```json
-{
-  "status": "ok",
-  "service": "provena-backend",
-  "database": "neon-postgresql"
-}
-```
-2. Open your live Cloudflare Pages frontend (`https://provena.pages.dev`).
-3. Click **"Generate & Anchor Reading"** to run a live Sepolia blockchain proof transaction.
-4. Click **"Verify Audit"** to observe `VERIFIED INTACT`.
-5. Run **"Tamper Demo Sandbox"** to test off-chain corruption vs on-chain immutability.
-
----
-
-## ⚠️ Free Tier Limitations & Disclosures
-
-1. **Render Cold Starts**: Render Free Web Services spin down after 15 minutes of inactivity. The first request after a spin-down may take ~15-25 seconds to wake up. Provena UI includes automatic retry indicators to handle cold starts gracefully.
-2. **Neon Inactivity Suspend**: Neon free databases auto-suspend when idle for several hours and automatically resume upon incoming connection.
-3. **Sepolia Gas Faucets**: Sepolia testnet ETH is free from public faucets and does not involve real monetary funds.
+1. **Render Free Spin-Down & Cold Starts**: Render Free Web Services spin down after 15 minutes of inactivity. The first request after a spin-down may take ~15-20 seconds to wake up. Provena UI includes automatic retry indicators to handle cold starts gracefully.
+2. **Ephemeral Filesystem Limitation**: Render Free instances use an ephemeral filesystem. Off-chain SQLite sensor data resets whenever the Render web service restarts, redeploys, or spins down. This is acceptable for hackathon demonstration purposes as it proves the core cryptographic provenance and blockchain verification flow.
